@@ -5,23 +5,13 @@ import { toast } from "sonner"
 import * as z from "zod"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 
 import { Button } from "@/components/ui/button"
-import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field"
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 
 import { Input } from "@/components/ui/input"
+import { useUserLoginMutation, useUserRegisterMutation } from "@/redux/features/apiSlice/authApi"
 
 // Schemas
 const signupSchema = z.object({
@@ -36,6 +26,16 @@ const loginSchema = z.object({
 })
 
 export function Auth() {
+
+  // const navigate = useNavigate();
+  const [registerUser, { isLoading: signupLoading }] = useUserRegisterMutation();
+  const [loginUser, { isLoading: loginLoading }] = useUserLoginMutation();
+
+
+
+  const [tab, setTab] = React.useState("signup")
+
+
   const signupForm = useForm({
     resolver: zodResolver(signupSchema),
     defaultValues: { name: "", email: "", password: "" },
@@ -46,23 +46,47 @@ export function Auth() {
     defaultValues: { email: "", password: "" },
   })
 
-  const onSignup = (data) => {
-    toast("Signup Success", {
-      description: JSON.stringify(data, null, 2),
-    })
-  }
+  const onSignup = async (data) => {
+    try {
+      const res = await registerUser(data).unwrap();;
 
-  const onLogin = (data) => {
-    toast("Login Success", {
-      description: JSON.stringify(data, null, 2),
-    })
-  }
+      toast("Signup Successful", {
+        description: "Account created successfully",
+      });
+
+      signupForm.reset(); // clear form
+      setTab("login"); 
+    } catch (error) {
+      toast("Signup Failed", {
+        description: error?.data?.message || "Something went wrong",
+      });
+    }
+  };
+
+  const onLogin = async (data) => {
+    try {
+
+      console.log("Login data:", data);
+
+      const res = await loginUser(data).unwrap();;
+
+      toast("Login Successful", {
+        description: "Welcome back!",
+      });
+
+      loginForm.reset();
+    } catch (error) {
+      toast("Login Failed", {
+        description: error?.data?.message || "Invalid credentials",
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-      
+
       <div className="w-full max-w-md">
-        <Tabs defaultValue="signup">
+        <Tabs value={tab} onValueChange={setTab}>
 
           <TabsList className="grid grid-cols-2 mb-4">
             <TabsTrigger value="signup">Sign Up</TabsTrigger>
@@ -127,8 +151,8 @@ export function Auth() {
 
                   </FieldGroup>
 
-                  <Button className="mt-6 w-full">
-                    Sign Up
+                  <Button className="mt-6 w-full" disabled={signupLoading}>
+                    {signupLoading ? "Signing up..." : "Sign Up"}
                   </Button>
                 </form>
               </CardContent>
@@ -179,9 +203,11 @@ export function Auth() {
 
                   </FieldGroup>
 
-                  <Button className="mt-6 w-full">
-                    Login
+
+                  <Button className="mt-6 w-full" disabled={loginLoading}>
+                    {loginLoading ? "Logging in..." : "Login"}
                   </Button>
+
                 </form>
               </CardContent>
             </Card>
